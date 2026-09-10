@@ -1,0 +1,21 @@
+[workspace]
+authors = ["Silen Wang <qiumin14@163.com>"]
+channels = ["conda-forge", "bioconda", "https://prefix.dev/github-releases", "https://prefix.dev/github-releases"]
+name = "ASOMAR"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.11,<3.12"
+viennarna = ">=2.7.2,<3"
+
+[pypi-dependencies]
+pandas = "==2.2.3"
+scikit-learn = "==1.5.2"
+matplotlib = "==3.9.2"
+numpy = "==2.0.0"
+biopython = ">=1.88, <2"
+tensorflow = "==2.18.0"
+keras = "==3.6.0"
