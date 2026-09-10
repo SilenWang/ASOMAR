@@ -91,9 +91,17 @@ def plot_history(history):
 def main():
     parser = argparse.ArgumentParser(description="Read data from a CSV file.")
     parser.add_argument('file_path', type=str, help='Path to the CSV file.')
+    parser.add_argument('--max-length', type=int, default=20,
+                        help='Max sequence length for one-hot padding (default 20).')
+    parser.add_argument('--val-csv', default=None,
+                        help='External validation CSV. When provided together with --test-csv, '
+                             'the internal random split is skipped.')
+    parser.add_argument('--test-csv', default=None,
+                        help='External test CSV. When provided together with --val-csv, '
+                             'the internal random split is skipped.')
     args = parser.parse_args()
     input_data = DataReader(args.file_path)
-    (df, seqs, labels, efficacy) = input_data.load_train_set(encoding='one_hot', max_length=20)
+    (df, seqs, labels, efficacy) = input_data.load_train_set(encoding='one_hot', max_length=args.max_length)
 
     # gene_list = df['TargetGene'].value_counts().index
     # for g in gene_list:
@@ -101,18 +109,30 @@ def main():
     # train_index = df[df['TargetGene'] != g].index
 
     # '''
-    trainAttrX, tempAttrX, trainX, tempX, train_label, temp_label, train_eff, temp_eff = train_test_split(df, seqs,
-                                                                                                          labels,
-                                                                                                          efficacy,
-                                                                                                          test_size=0.2,
-                                                                                                          shuffle=True,
-                                                                                                          random_state=42)
-    valAttrX, testAttrX, valX, testX, val_label, test_label, val_eff, test_eff = train_test_split(tempAttrX, tempX,
-                                                                                                  temp_label,
-                                                                                                  temp_eff,
-                                                                                                  test_size=0.5,
-                                                                                                  shuffle=True,
-                                                                                                  random_state=42)
+    if args.val_csv and args.test_csv:
+        # 外部提供的 train/val/test 划分（用户划分），跳过内部随机切分
+        print(f"[external split] val={args.val_csv}, test={args.test_csv}")
+        val_data = DataReader(args.val_csv)
+        test_data = DataReader(args.test_csv)
+        valAttrX, valX, val_label, val_eff = val_data.load_train_set(encoding='one_hot',
+                                                                     max_length=args.max_length)
+        testAttrX, testX, test_label, test_eff = test_data.load_train_set(encoding='one_hot',
+                                                                          max_length=args.max_length)
+        trainAttrX, trainX, train_label, train_eff = df, seqs, labels, efficacy
+    else:
+        # 默认：内部随机划分 80/10/10
+        trainAttrX, tempAttrX, trainX, tempX, train_label, temp_label, train_eff, temp_eff = train_test_split(df, seqs,
+                                                                                                              labels,
+                                                                                                              efficacy,
+                                                                                                              test_size=0.2,
+                                                                                                              shuffle=True,
+                                                                                                              random_state=42)
+        valAttrX, testAttrX, valX, testX, val_label, test_label, val_eff, test_eff = train_test_split(tempAttrX, tempX,
+                                                                                                      temp_label,
+                                                                                                      temp_eff,
+                                                                                                      test_size=0.5,
+                                                                                                      shuffle=True,
+                                                                                                      random_state=42)
     # '''
     # train_set = df[df['TargetGene'] != g]
     # trainX = seqs[train_index]
@@ -133,7 +153,7 @@ def main():
     features = ["concentration", "self_bind", "open_prob", "dG", "MFE", "ASOMFE", "TM"]
     category = ["modify"]
     plain = ["max_open_length", "open_pc"]
-    categories = df["modify"]
+    categories = df["modify"] if not (args.val_csv and args.test_csv) else trainAttrX["modify"]
 
     feature_processor = NoneSeqFeatureProcessor(continuous=features, category=category, plain=plain)
     _, testAttrX = feature_processor.process_train_features(trainAttrX, testAttrX, categories=categories)

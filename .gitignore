@@ -1,3 +1,7 @@
-
 ASO_pr_values.csv
 *.keras
+# 数据文件不进入版本管理（训练数据由外部数据源生成）
+*.csv
+# pixi environments
+.pixi/*
+!.pixi/config.toml
